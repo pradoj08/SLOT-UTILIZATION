@@ -1,0 +1,1023 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IHOSA Slot Utilization on Loaded Railcars</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #18212f;
+      --muted: #667085;
+      --line: #d9dee7;
+      --accent: #126d78;
+      --accent-strong: #0e5660;
+      --warn: #b45309;
+      --danger: #b42318;
+      --ok: #137333;
+      --chip: #edf4f5;
+      --shadow: 0 8px 24px rgba(24, 33, 47, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 14px/1.45 Arial, Helvetica, sans-serif;
+    }
+
+    .report-heading {
+      min-height: 82px;
+      padding: 12px 18px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    .report-heading h1 {
+      margin: 0;
+      font-size: 34px;
+      letter-spacing: 0;
+      text-transform: uppercase;
+      cursor: text;
+      outline: 1px dashed transparent;
+    }
+
+    .report-heading h1:focus {
+      outline-color: var(--accent);
+      background: #f4fbfc;
+    }
+
+    main {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .summary, .workspace {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 0 14px;
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover { background: var(--accent-strong); }
+
+    button.secondary {
+      background: white;
+      color: var(--ink);
+      border-color: var(--line);
+    }
+
+    button.secondary:hover { background: #f1f4f7; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0;
+      overflow: hidden;
+    }
+
+    .input-pane, .results-pane {
+      padding: 16px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .input-pane {
+      border-top: 1px solid var(--line);
+      background: #fbfcfd;
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .input-title {
+      display: none;
+    }
+
+    .input-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+    }
+
+    .print-hidden {
+      display: none !important;
+    }
+
+    .title-with-status {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      min-width: 0;
+      flex-wrap: wrap;
+    }
+
+    h2 {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    textarea, .input-editor {
+      width: 100%;
+      min-height: 220px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 12px;
+      font: 13px/1.35 Consolas, "Courier New", monospace;
+      color: var(--ink);
+      background: white;
+    }
+
+    .input-editor {
+      overflow: auto;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .input-editor:focus {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+
+    .input-editor > span {
+      display: block;
+    }
+
+    .missing-top-line {
+      display: block;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .input-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .input-card {
+      display: grid;
+      gap: 8px;
+    }
+
+    .input-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .track-picker {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .track-picker select {
+      width: 110px;
+    }
+
+    .track-print-label {
+      display: none;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .input-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 6px 8px;
+      background: white;
+      color: var(--ink);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      padding: 14px;
+      background: white;
+      text-align: center;
+      min-width: 0;
+    }
+
+    .metric .value {
+      display: block;
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+
+    .metric .label {
+      display: block;
+      color: var(--muted);
+      margin-top: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 2px;
+    }
+
+    .chip {
+      border: 1px solid #c6dfe3;
+      border-radius: 999px;
+      background: var(--chip);
+      padding: 5px 9px;
+      color: #0e5660;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .tables {
+      display: grid;
+      gap: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .summary-table {
+      table-layout: fixed;
+    }
+
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+    }
+
+    th {
+      background: #eef2f6;
+      color: #344054;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .reason {
+      font-weight: 800;
+    }
+
+    .reason.ok { color: var(--ok); }
+    .reason.warn { color: var(--warn); }
+    .reason.danger { color: var(--danger); }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 36px 18px;
+      text-align: center;
+      color: var(--muted);
+      background: #fbfcfd;
+    }
+
+    .status-line {
+      margin-top: 10px;
+      color: var(--muted);
+      min-height: 20px;
+    }
+
+    td[contenteditable="true"] {
+      background: #fffdf5;
+      outline: 1px dashed transparent;
+      white-space: pre-wrap;
+      overflow-wrap: break-word;
+    }
+
+    td[contenteditable="true"]:focus {
+      outline-color: var(--warn);
+      background: #fff8e6;
+    }
+
+    @media (max-width: 980px) {
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+
+      .input-pane {
+        border-right: 0;
+      }
+    }
+
+    @media print {
+      @page {
+        size: portrait;
+        margin: 0.35in;
+      }
+
+      body {
+        background: white;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      main {
+        width: 100%;
+        max-width: 7.2in;
+        padding: 0;
+        margin: 0 auto;
+      }
+
+      .workspace {
+        border: 0;
+        box-shadow: none;
+        width: 100%;
+      }
+
+      .results-pane, .input-pane {
+        padding: 10px 0;
+        overflow: visible;
+      }
+
+      .report-heading {
+        min-height: 82px;
+        padding: 12px 18px;
+        break-inside: avoid;
+      }
+
+      .report-heading h1 {
+        font-size: 24px;
+        white-space: nowrap;
+      }
+
+      .summary {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+        margin-bottom: 16px;
+        margin-left: auto;
+        margin-right: auto;
+        break-inside: avoid;
+        overflow: visible;
+        grid-template-columns: 1fr 1fr 1fr 1.35fr;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 10px 4px;
+        min-width: 0;
+      }
+
+      .metric .value {
+        font-size: 20px;
+        white-space: nowrap;
+      }
+
+      .metric:last-child .value {
+        font-size: 18px;
+      }
+
+      .metric .label {
+        font-size: 8px;
+        white-space: nowrap;
+      }
+
+      .input-controls,
+      .input-title button,
+      .input-card-header strong,
+      .track-picker,
+      .track-picker select {
+        display: none;
+      }
+
+      .track-print-label {
+        display: inline;
+      }
+
+      .input-pane {
+        border-top: 1px solid var(--line);
+      }
+
+      .input-list {
+        gap: 8px;
+      }
+
+      .input-editor {
+        min-height: 0;
+        max-height: none;
+        border-color: var(--line);
+        overflow: visible;
+        font-size: 10px;
+      }
+
+      th, td {
+        padding: 6px 8px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="workspace">
+      <div class="results-pane">
+        <div class="report-heading">
+          <h1 id="pageTitle" contenteditable="true" spellcheck="false">IHOSA Slot Utilization on Loaded Railcars</h1>
+        </div>
+
+        <div class="summary" id="summary">
+          <div class="metric"><span class="value">0%</span><span class="label">Slot Utilization</span></div>
+          <div class="metric"><span class="value">0/0</span><span class="label">Well Breakdown</span></div>
+          <div class="metric"><span class="value">0</span><span class="label">Missing Tops</span></div>
+          <div class="metric"><span class="value">None</span><span class="label">Main Destination Offender</span></div>
+        </div>
+
+        <div id="results" class="empty">Paste data into an input box to scan automatically.</div>
+      </div>
+
+      <div class="input-pane">
+        <span id="parseStatus" class="hint" hidden></span>
+        <div class="input-list" id="inputList">
+          <div class="input-card">
+            <div class="input-card-header">
+              <strong>Input 1</strong>
+              <span class="track-print-label"></span>
+              <div class="input-controls">
+                <button id="printBtn" class="secondary">Save PDF</button>
+                <button id="clearBtn" class="secondary">Clear</button>
+              </div>
+              <label class="track-picker">Track
+                <select class="trackSelect"></select>
+              </label>
+            </div>
+            <div class="dataInput input-editor" contenteditable="true" spellcheck="false" data-placeholder="Paste railcar report data here"></div>
+          </div>
+          <div class="input-card">
+            <div class="input-card-header">
+              <strong>Input 2</strong>
+              <span class="track-print-label"></span>
+              <label class="track-picker">Track
+                <select class="trackSelect"></select>
+              </label>
+            </div>
+            <div class="dataInput input-editor" contenteditable="true" spellcheck="false" data-placeholder="Optional additional railcar report data"></div>
+          </div>
+          <div class="input-card">
+            <div class="input-card-header">
+              <strong>Input 3</strong>
+              <span class="track-print-label"></span>
+              <label class="track-picker">Track
+                <select class="trackSelect"></select>
+              </label>
+            </div>
+            <div class="dataInput input-editor" contenteditable="true" spellcheck="false" data-placeholder="Optional additional railcar report data"></div>
+          </div>
+          <div class="input-card">
+            <div class="input-card-header">
+              <strong>Input 4</strong>
+              <span class="track-print-label"></span>
+              <label class="track-picker">Track
+                <select class="trackSelect"></select>
+              </label>
+            </div>
+            <div class="dataInput input-editor" contenteditable="true" spellcheck="false" data-placeholder="Optional additional railcar report data"></div>
+          </div>
+        </div>
+        <div class="status-line" id="statusLine"></div>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const inputs = [...document.querySelectorAll(".dataInput")];
+    const trackSelects = [...document.querySelectorAll(".trackSelect")];
+    const trackPrintLabels = [...document.querySelectorAll(".track-print-label")];
+    const clearBtn = document.getElementById("clearBtn");
+    const printBtn = document.getElementById("printBtn");
+    const statusLine = document.getElementById("statusLine");
+    const parseStatus = document.getElementById("parseStatus");
+    const results = document.getElementById("results");
+    const summary = document.getElementById("summary");
+    const pageTitle = document.getElementById("pageTitle");
+    let titleEditedByUser = false;
+    let analyzeTimer = null;
+    let renderingHighlights = false;
+
+    const trackOptions = ["06-801", "06-802", "06-803", "06-804", "06-805", "06-806", "06-807", "06-808", "06-809"];
+
+    const sampleData = `Seq: 1    Equipment ID: DTTX 657191    Car Kind: P1A    AAR Kind:S615    Length: 77    Tons: 77    Total Length: 77    Total Tons: 77
+Pos    Unit ID AAR Kind        Car Kind        Load/Empty        Type    Priority        Parking(Lot-Area-Slot)
+BB1    UMXU 896464    U287    K7W    L    COFC    6    LATHROP CA    Loaded Railcar    25
+Seq: 2    Equipment ID: DTTX 721025    Car Kind: P3A    AAR Kind:S635    Length: 204    Tons: 122    Total Length: 358    Total Tons: 266
+Pos    Unit ID AAR Kind        Car Kind        Load/Empty        Type    Priority        Parking(Lot-Area-Slot)
+AT1    EMHU 264695    U287    K7W    E    COFC    6    ICTF CA    Loaded Railcar    5
+AB1    SWRU 947307    U983    K7E    L    COFC    6    ICTF CA    Loaded Railcar    12
+CT1    EMHU 269917    U287    K7W    E    COFC    6    ICTF CA    Loaded Railcar    5
+CB1    HGIU 528331    U983    K7E    L    COFC    6    ICTF CA    Loaded Railcar    5
+BT1    HGIU 645184    U288    K7W    L    COFC    6    ICTF CA    Loaded Railcar    5
+BB1    XPOU 430533    U288    K7W    L    COFC    6    ICTF CA    Loaded Railcar    25
+Seq: 3    Equipment ID: DTTX 733061    Car Kind: P3A    AAR Kind:S635    Length: 204    Tons: 172    Total Length: 1201    Total Tons: 842
+Pos    Unit ID AAR Kind        Car Kind        Load/Empty        Type    Priority        Parking(Lot-Area-Slot)
+BT1    HGIU 525838    U983    K7E    L    COFC    6    ICTF CA    Loaded Railcar    5
+BB1    UMXU 246306    U283    K7W    L    COFC    6    ICTF CA    Loaded Railcar    25
+CT1    HGIU 511844    U288    K7W    L    COFC    6    ICTF CA    Loaded Railcar    12
+CB1    EMHU 300511    U283    K70    L    COFC    6    ICTF CA    Loaded Railcar    26
+AT1    HGIU 649797    U288    K7W    L    COFC    6    ICTF CA    Loaded Railcar    11
+AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar    23`;
+
+    function splitRows(text) {
+      return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter(row => row.trim().length);
+    }
+
+    function normalize(value) {
+      return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    }
+
+    function looksLikeRailcarReport(text) {
+      return /^Seq:\s*\d+/m.test(text) && /^\s*[A-Z][TB]\d+\s+/m.test(text);
+    }
+
+    function detectTrainName(text) {
+      const match = text.match(/\b(?:Train ID:\s*)?(IHOSA|MHOAS)\b/i);
+      return match ? match[1].toUpperCase() : "IHOSA";
+    }
+
+    function updatePageTitle(text) {
+      if (titleEditedByUser) return;
+      const title = `${detectTrainName(text)} Slot Utilization on Loaded Railcars`;
+      pageTitle.textContent = title;
+      document.title = title;
+    }
+
+    function getInputEntries() {
+      return inputs
+        .map((box, index) => ({
+          text: getInputText(box).trim(),
+          track: trackSelects[index].value,
+          sourceIndex: index
+        }))
+        .filter(entry => entry.text.length);
+    }
+
+    function getCombinedInputText() {
+      return getInputEntries().map(entry => entry.text).join("\n");
+    }
+
+    function parseAllRailcarReports(entries) {
+      return entries.flatMap(entry => parseRailcarReport(entry.text, entry.track, entry.sourceIndex));
+    }
+
+    function getInputText(box) {
+      return box.innerText || "";
+    }
+
+    function parseRailcarReport(text, track = "", sourceIndex = 0) {
+      const cars = [];
+      let currentCar = null;
+      splitRows(text).forEach(line => {
+        const seqMatch = line.match(/^Seq:\s*(\d+).*?Equipment ID:\s*([A-Z]+\s*\d+)/i);
+        if (seqMatch) {
+          currentCar = {
+            seq: seqMatch[1],
+            equipmentId: seqMatch[2].replace(/\s+/g, " ").trim(),
+            carKind: valueAfter(line, "Car Kind:"),
+            aarKind: valueAfter(line, "AAR Kind:"),
+            destination: extractSystemDestination(line),
+            track,
+            sourceIndex,
+            positions: []
+          };
+          cars.push(currentCar);
+          return;
+        }
+
+        if (currentCar && /System Destination:/i.test(line)) {
+          currentCar.destination = extractSystemDestination(line) || currentCar.destination;
+          return;
+        }
+
+        const posMatch = line.match(/^\s*([A-Z])([TB])(\d+)\s+(.+)$/);
+        if (!posMatch || !currentCar) return;
+
+        const tokens = posMatch[4].trim().split(/\s+/);
+        currentCar.positions.push({
+          rawPosition: `${posMatch[1]}${posMatch[2]}${posMatch[3]}`,
+          well: posMatch[1],
+          level: posMatch[2],
+          stack: posMatch[3],
+          unitId: `${tokens[0] || ""} ${tokens[1] || ""}`.trim(),
+          destination: extractDestination(posMatch[4]),
+          rawLine: line.trim()
+        });
+      });
+      return cars;
+    }
+
+    function extractDestination(positionText) {
+      const match = positionText.match(/\b([A-Z][A-Z-]*)\s+([A-Z]{2})\s+Loaded Railcar\b/i);
+      return match ? `${match[1]} ${match[2]}` : "";
+    }
+
+    function extractSystemDestination(text) {
+      const match = text.match(/System Destination:\s*([A-Z0-9 -]+),?\s+([A-Z]{2})\b/i);
+      return match ? `${match[1].trim()} ${match[2].trim()}` : "";
+    }
+
+    function valueAfter(line, label) {
+      const start = line.indexOf(label);
+      if (start === -1) return "";
+      const rest = line.slice(start + label.length).trim();
+      const nextLabel = rest.search(/\s{2,}[A-Z][A-Za-z /]+:/);
+      return (nextLabel === -1 ? rest : rest.slice(0, nextLabel)).trim();
+    }
+
+    function findMissingTops(cars) {
+      const missing = [];
+      cars.forEach(car => {
+        const wells = new Map();
+        car.positions.forEach(position => {
+          const key = `${position.well}${position.stack}`;
+          const well = wells.get(key) || { well: position.well, stack: position.stack, top: null, bottom: null };
+          if (position.level === "T") well.top = position;
+          if (position.level === "B") well.bottom = position;
+          wells.set(key, well);
+        });
+
+        wells.forEach(well => {
+          if (well.bottom && !well.top) {
+            missing.push({
+              seq: car.seq,
+              equipmentId: car.equipmentId,
+              track: car.track,
+              sourceIndex: car.sourceIndex,
+              carKind: car.carKind,
+              aarKind: car.aarKind,
+              destination: well.bottom.destination || car.destination || "EMPTY CONTAINER",
+              well: well.well,
+              stack: well.stack,
+              expectedTop: `${well.well}T${well.stack}`,
+              bottomPosition: well.bottom.rawPosition,
+              bottomUnit: well.bottom.unitId,
+              rawLine: well.bottom.rawLine,
+              detail: "Bottom listed without matching top"
+            });
+          }
+        });
+      });
+      return missing;
+    }
+
+    function calculateSlotUtilization(cars) {
+      let loadedTops = 0;
+      let possibleTops = 0;
+
+      cars.forEach(car => {
+        const wells = new Map();
+        car.positions.forEach(position => {
+          const key = `${position.well}${position.stack}`;
+          const well = wells.get(key) || { top: null, bottom: null };
+          if (position.level === "T") well.top = position;
+          if (position.level === "B") well.bottom = position;
+          wells.set(key, well);
+        });
+
+        wells.forEach(well => {
+          if (well.bottom) {
+            possibleTops++;
+            if (well.top) loadedTops++;
+          }
+        });
+      });
+
+      return {
+        loadedTops,
+        possibleTops,
+        rate: possibleTops ? Math.round((loadedTops / possibleTops) * 1000) / 10 : 0
+      };
+    }
+
+    function analyzeRailcarReport(entries) {
+      const cars = parseAllRailcarReports(entries);
+      const missing = findMissingTops(cars);
+      const affectedCars = new Set(missing.map(item => item.equipmentId)).size;
+      const slotUtilization = calculateSlotUtilization(cars);
+      renderReportSummary(cars.length, missing.length, affectedCars, slotUtilization, getMainDestinationOffender(missing));
+      renderMissingTopResults(missing, cars);
+      highlightMissingTopLines(missing);
+      parseStatus.textContent = "";
+      statusLine.textContent = "";
+    }
+
+    function analyze() {
+      if (renderingHighlights) return;
+      const entries = getInputEntries();
+      const combinedText = getCombinedInputText();
+      updatePageTitle(combinedText);
+
+      if (!entries.length) {
+        clearInputHighlights();
+        renderEmpty("Paste data into at least one input box to scan automatically.");
+        parseStatus.textContent = "";
+        return;
+      }
+
+      if (looksLikeRailcarReport(combinedText)) {
+        analyzeRailcarReport(entries);
+        return;
+      }
+
+      renderEmpty("Paste railcar report data with Seq rows and top/bottom positions.");
+      parseStatus.textContent = "";
+    }
+
+    function highlightMissingTopLines(missing) {
+      const byInput = new Map();
+      missing.forEach(item => {
+        const lines = byInput.get(item.sourceIndex) || new Set();
+        lines.add(normalizeLine(item.rawLine));
+        byInput.set(item.sourceIndex, lines);
+      });
+
+      renderingHighlights = true;
+      inputs.forEach((box, index) => {
+        const text = getInputText(box);
+        const linesToHighlight = byInput.get(index) || new Set();
+        const signature = [...linesToHighlight].sort().join("\n");
+        if (box.dataset.highlightSignature === signature && box.dataset.lastText === text) return;
+        box.dataset.highlightSignature = signature;
+        box.dataset.lastText = text;
+        box.innerHTML = splitPreservingBlankLines(text)
+          .map(line => {
+            const escaped = escapeHtml(line) || "<br>";
+            return linesToHighlight.has(normalizeLine(line))
+              ? `<span class="missing-top-line">${escaped}</span>`
+              : `<span>${escaped}</span>`;
+          })
+          .join("");
+      });
+      renderingHighlights = false;
+    }
+
+    function clearInputHighlights() {
+      renderingHighlights = true;
+      inputs.forEach(box => {
+        box.textContent = getInputText(box);
+      });
+      renderingHighlights = false;
+    }
+
+    function scheduleAnalyze(delay = 150) {
+      if (renderingHighlights) return;
+      clearTimeout(analyzeTimer);
+      analyzeTimer = setTimeout(analyze, delay);
+    }
+
+    function splitPreservingBlankLines(text) {
+      return text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    }
+
+    function normalizeLine(line) {
+      return String(line || "").replace(/\s+/g, " ").trim();
+    }
+
+    function getMainDestinationOffender(missing) {
+      const counts = new Map();
+      missing.forEach(item => {
+        const destination = `${item.track} ${item.destination || "EMPTY CONTAINER"}`.trim();
+        counts.set(destination, (counts.get(destination) || 0) + 1);
+      });
+      return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || "None";
+    }
+
+    function renderReportSummary(carCount, missingTopCount, affectedCars, slotUtilization, mainDestination) {
+      summary.innerHTML = `
+        <div class="metric"><span class="value">${slotUtilization.rate}%</span><span class="label">Slot Utilization</span></div>
+        <div class="metric"><span class="value">${slotUtilization.loadedTops}/${slotUtilization.possibleTops}</span><span class="label">Well Breakdown</span></div>
+        <div class="metric"><span class="value">${missingTopCount}</span><span class="label">Missing Tops</span></div>
+        <div class="metric"><span class="value">${escapeHtml(mainDestination)}</span><span class="label">Main Destination Offender</span></div>
+      `;
+    }
+
+    function renderMissingTopResults(missing, cars) {
+      if (!missing.length) {
+        results.className = "empty";
+        results.textContent = "No missing top positions found. Every bottom position has a matching top in the same car and well.";
+        return;
+      }
+
+      const grouped = groupMissingByCar(missing);
+      results.className = "tables";
+      results.innerHTML = `
+        <section>
+          <div class="section-title">
+            <h2>Missing Top Summary</h2>
+          </div>
+          <table class="summary-table">
+            <colgroup>
+              <col style="width: 16%">
+              <col style="width: 16%">
+              <col style="width: 9%">
+              <col style="width: 12%">
+              <col style="width: 24%">
+              <col style="width: 23%">
+            </colgroup>
+            <thead>
+              <tr><th>Car</th><th>Destination</th><th>Track</th><th>Missing Wells</th><th>Bottom Units Missing Top</th><th>Notes</th></tr>
+            </thead>
+            <tbody>
+              ${grouped.map(group => `
+                <tr>
+                  <td class="reason danger">${escapeHtml(group.equipmentId)}</td>
+                  <td>${escapeHtml(group.destination)}</td>
+                  <td>${escapeHtml(group.track)}</td>
+                  <td>${escapeHtml(group.items.map(item => `${item.well}${item.stack}`).join(", "))}</td>
+                  <td>${escapeHtml(group.items.map(item => item.bottomUnit || item.bottomPosition).join(", "))}</td>
+                  <td contenteditable="true" data-note-key="${escapeHtml(group.key)}"></td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </section>
+      `;
+
+    }
+
+    function groupMissingByCar(missing) {
+      const map = new Map();
+      missing.forEach(item => {
+        const key = `${item.track}|${item.seq}|${item.equipmentId}`;
+        const group = map.get(key) || { key, seq: item.seq, equipmentId: item.equipmentId, destination: item.destination, track: item.track, items: [] };
+        group.items.push(item);
+        map.set(key, group);
+      });
+      return [...map.values()];
+    }
+
+    function renderEmpty(message) {
+      summary.innerHTML = `
+        <div class="metric"><span class="value">0%</span><span class="label">Slot Utilization</span></div>
+        <div class="metric"><span class="value">0/0</span><span class="label">Well Breakdown</span></div>
+        <div class="metric"><span class="value">0</span><span class="label">Missing Tops</span></div>
+        <div class="metric"><span class="value">None</span><span class="label">Main Destination Offender</span></div>
+      `;
+      results.className = "empty";
+      results.textContent = message;
+      statusLine.textContent = message;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    clearBtn.addEventListener("click", () => {
+      inputs.forEach(box => {
+        box.textContent = "";
+      });
+      renderEmpty("Paste data into an input box to scan automatically.");
+      parseStatus.textContent = "";
+      statusLine.textContent = "";
+      updatePageTitle("");
+    });
+
+    inputs.forEach(box => {
+      box.addEventListener("paste", event => {
+        event.preventDefault();
+        const text = event.clipboardData.getData("text/plain");
+        insertPlainTextAtCursor(text);
+        scheduleAnalyze(50);
+      });
+
+      box.addEventListener("input", () => {
+        scheduleAnalyze();
+      });
+    });
+
+    trackSelects.forEach((select, index) => {
+      trackOptions.forEach(track => select.append(new Option(track, track)));
+      select.value = trackOptions[index] || trackOptions[0];
+      select.addEventListener("change", () => {
+        updateTrackPrintLabels();
+        analyze();
+      });
+    });
+    updateTrackPrintLabels();
+
+    printBtn.addEventListener("click", () => {
+      hideEmptyInputsForPrint();
+      window.print();
+    });
+
+    window.addEventListener("afterprint", restoreInputsAfterPrint);
+
+    function insertPlainTextAtCursor(text) {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      const textNode = document.createTextNode(text);
+      range.insertNode(textNode);
+      range.setStartAfter(textNode);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    function hideEmptyInputsForPrint() {
+      inputs.forEach(box => {
+        const card = box.closest(".input-card");
+        card.classList.toggle("print-hidden", !getInputText(box).trim());
+      });
+    }
+
+    function restoreInputsAfterPrint() {
+      document.querySelectorAll(".input-card.print-hidden").forEach(card => {
+        card.classList.remove("print-hidden");
+      });
+    }
+
+    function updateTrackPrintLabels() {
+      trackPrintLabels.forEach((label, index) => {
+        label.textContent = trackSelects[index].value;
+      });
+    }
+
+    pageTitle.addEventListener("input", () => {
+      titleEditedByUser = true;
+      document.title = pageTitle.textContent.trim() || "Slot Utilization on Loaded Railcars";
+    });
+
+  </script>
+</body>
+</html>
