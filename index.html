@@ -149,6 +149,7 @@
     textarea, .input-editor {
       width: 100%;
       min-height: 220px;
+      max-height: 360px;
       resize: vertical;
       border: 1px solid var(--line);
       border-radius: 6px;
@@ -165,19 +166,30 @@
       word-break: break-word;
     }
 
+    .snapshot-active .input-editor {
+      min-height: 0;
+      max-height: none;
+      overflow: visible;
+    }
+
     .input-editor:focus {
       outline: 2px solid var(--accent);
       outline-offset: 1px;
     }
 
     .input-editor > span {
-      display: block;
+      display: inline;
     }
 
     .missing-top-line {
-      display: block;
       background: #fee2e2;
       color: #991b1b;
+    }
+
+    .snapshot-seq-line {
+      background: #eef2f6;
+      color: var(--ink);
+      font-weight: 700;
     }
 
     .input-list {
@@ -188,6 +200,7 @@
     .input-card {
       display: grid;
       gap: 8px;
+      scroll-margin-top: 12px;
     }
 
     .input-card-header {
@@ -195,6 +208,7 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      min-height: 38px;
     }
 
     .track-picker {
@@ -510,6 +524,7 @@
               <span class="track-print-label"></span>
               <div class="input-controls">
                 <button id="printBtn" class="secondary">Save PDF</button>
+                <button id="snapshotBtn" class="secondary">Snap Shot</button>
                 <button id="clearBtn" class="secondary">Clear</button>
               </div>
               <label class="track-picker">Track
@@ -561,6 +576,7 @@
     const trackPrintLabels = [...document.querySelectorAll(".track-print-label")];
     const clearBtn = document.getElementById("clearBtn");
     const printBtn = document.getElementById("printBtn");
+    const snapshotBtn = document.getElementById("snapshotBtn");
     const statusLine = document.getElementById("statusLine");
     const parseStatus = document.getElementById("parseStatus");
     const results = document.getElementById("results");
@@ -569,6 +585,8 @@
     let titleEditedByUser = false;
     let analyzeTimer = null;
     let renderingHighlights = false;
+    let snapshotActive = false;
+    let snapshotOriginals = [];
 
     const trackOptions = ["06-801", "06-802", "06-803", "06-804", "06-805", "06-806", "06-807", "06-808", "06-809"];
 
@@ -635,7 +653,38 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     }
 
     function getInputText(box) {
-      return box.innerText || "";
+      if (box.dataset.rawText !== undefined) return trimOuterBlankLines(box.dataset.rawText);
+      const text = trimOuterBlankLines(box.innerText || "");
+      box.dataset.rawText = text;
+      return text;
+    }
+
+    function trimOuterBlankLines(text) {
+      const lines = String(text || "")
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .split("\n");
+      while (lines.length && !lines[0].trim()) lines.shift();
+      while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
+      return lines.join("\n");
+    }
+
+    function sanitizeInputBox(box) {
+      const rawText = box.innerText || "";
+      const cleanText = trimOuterBlankLines(rawText);
+      if (rawText !== cleanText) {
+        setInputPlainText(box, cleanText);
+        moveCursorToStart(box);
+      }
+    }
+
+    function setInputPlainText(box, text) {
+      const cleanText = trimOuterBlankLines(text);
+      box.dataset.rawText = cleanText;
+      box.dataset.highlightSignature = "";
+      box.dataset.lastText = "";
+      box.textContent = cleanText;
+      box.scrollTop = 0;
     }
 
     function parseRailcarReport(text, track = "", sourceIndex = 0) {
@@ -792,6 +841,69 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       statusLine.textContent = "";
     }
 
+    function createSnapshot() {
+      if (snapshotActive) {
+        restoreSnapshot();
+        return;
+      }
+
+      const entries = getInputEntries();
+      if (!entries.length) return;
+
+      const cars = parseAllRailcarReports(entries);
+      const missing = findMissingTops(cars);
+      snapshotOriginals = inputs.map(box => getInputText(box));
+      snapshotActive = true;
+      document.body.classList.add("snapshot-active");
+      snapshotBtn.textContent = "Full View";
+      const keepSeqsByInput = new Map();
+      missing.forEach(item => {
+        const keepSeqs = keepSeqsByInput.get(item.sourceIndex) || new Set();
+        keepSeqs.add(item.seq);
+        keepSeqsByInput.set(item.sourceIndex, keepSeqs);
+      });
+
+      inputs.forEach((box, index) => {
+        const keepSeqs = keepSeqsByInput.get(index);
+        if (!keepSeqs || !keepSeqs.size) {
+          setInputPlainText(box, "");
+          return;
+        }
+        setInputPlainText(box, filterTextToSeqs(getInputText(box), keepSeqs));
+      });
+
+      analyze();
+    }
+
+    function restoreSnapshot() {
+      inputs.forEach((box, index) => {
+        setInputPlainText(box, snapshotOriginals[index] || "");
+      });
+      snapshotActive = false;
+      snapshotOriginals = [];
+      document.body.classList.remove("snapshot-active");
+      snapshotBtn.textContent = "Snap Shot";
+      analyze();
+    }
+
+    function filterTextToSeqs(text, keepSeqs) {
+      const blocks = [];
+      let current = null;
+      splitPreservingBlankLines(text).forEach(line => {
+        const seqMatch = line.match(/^Seq:\s*(\d+)/i);
+        if (seqMatch) {
+          current = { seq: seqMatch[1], lines: [line] };
+          blocks.push(current);
+        } else if (current) {
+          current.lines.push(line);
+        }
+      });
+      return blocks
+        .filter(block => keepSeqs.has(block.seq))
+        .map(block => trimOuterBlankLines(block.lines.join("\n")))
+        .join("\n");
+    }
+
     function analyze() {
       if (renderingHighlights) return;
       const entries = getInputEntries();
@@ -824,6 +936,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
 
       renderingHighlights = true;
       inputs.forEach((box, index) => {
+        if (box.dataset.editing === "true") return;
         const text = getInputText(box);
         const linesToHighlight = byInput.get(index) || new Set();
         const signature = [...linesToHighlight].sort().join("\n");
@@ -832,12 +945,16 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
         box.dataset.lastText = text;
         box.innerHTML = splitPreservingBlankLines(text)
           .map(line => {
-            const escaped = escapeHtml(line) || "<br>";
+            const escaped = escapeHtml(line);
+            if (snapshotActive && /^Seq:\s*\d+/i.test(line.trim())) {
+              return `<span class="snapshot-seq-line">${escaped}</span>`;
+            }
             return linesToHighlight.has(normalizeLine(line))
               ? `<span class="missing-top-line">${escaped}</span>`
               : `<span>${escaped}</span>`;
           })
-          .join("");
+          .join("\n");
+        box.scrollTop = 0;
       });
       renderingHighlights = false;
     }
@@ -960,8 +1077,12 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
 
     clearBtn.addEventListener("click", () => {
       inputs.forEach(box => {
-        box.textContent = "";
+        setInputPlainText(box, "");
       });
+      snapshotActive = false;
+      snapshotOriginals = [];
+      document.body.classList.remove("snapshot-active");
+      snapshotBtn.textContent = "Snap Shot";
       renderEmpty("Paste data into an input box to scan automatically.");
       parseStatus.textContent = "";
       statusLine.textContent = "";
@@ -969,17 +1090,112 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     });
 
     inputs.forEach(box => {
+      box.addEventListener("beforeinput", event => {
+        if (event.inputType && event.inputType !== "insertFromPaste") {
+          box.dataset.editing = "true";
+          if ((event.inputType === "deleteContentBackward" || event.inputType === "deleteContentForward") && hasSelectionInside(box)) {
+            event.preventDefault();
+            deleteSelectedText(box);
+            scheduleAnalyze();
+            return;
+          }
+          flattenEditorForEditing(box);
+        }
+      });
+
       box.addEventListener("paste", event => {
         event.preventDefault();
-        const text = event.clipboardData.getData("text/plain");
-        insertPlainTextAtCursor(text);
+        const text = trimOuterBlankLines(event.clipboardData.getData("text/plain"));
+        setInputPlainText(box, text);
+        box.dataset.editing = "false";
+        snapshotActive = false;
+        snapshotOriginals = [];
+        document.body.classList.remove("snapshot-active");
+        snapshotBtn.textContent = "Snap Shot";
         scheduleAnalyze(50);
       });
 
       box.addEventListener("input", () => {
+        if (!renderingHighlights) {
+          box.dataset.rawText = trimOuterBlankLines(box.innerText || "");
+          box.dataset.highlightSignature = "";
+          box.dataset.lastText = "";
+        }
         scheduleAnalyze();
       });
+
+      box.addEventListener("blur", () => {
+        box.dataset.editing = "false";
+        scheduleAnalyze(50);
+      });
     });
+
+    function flattenEditorForEditing(box) {
+      if (!box.querySelector(".missing-top-line")) return;
+      const text = getInputText(box);
+      const offset = getCaretOffset(box);
+      setInputPlainText(box, text);
+      setCaretOffset(box, Math.min(offset, text.length));
+    }
+
+    function hasSelectionInside(container) {
+      const selection = window.getSelection();
+      if (!selection.rangeCount || selection.isCollapsed) return false;
+      const range = selection.getRangeAt(0);
+      return container.contains(range.startContainer) && container.contains(range.endContainer);
+    }
+
+    function deleteSelectedText(box) {
+      const text = getInputText(box);
+      const selection = getSelectionOffsets(box);
+      const nextText = text.slice(0, selection.start) + text.slice(selection.end);
+      setInputPlainText(box, nextText);
+      setCaretOffset(box, selection.start);
+    }
+
+    function getSelectionOffsets(container) {
+      const selection = window.getSelection();
+      const range = selection.getRangeAt(0);
+      const startRange = range.cloneRange();
+      startRange.selectNodeContents(container);
+      startRange.setEnd(range.startContainer, range.startOffset);
+      const endRange = range.cloneRange();
+      endRange.selectNodeContents(container);
+      endRange.setEnd(range.endContainer, range.endOffset);
+      const start = startRange.toString().length;
+      const end = endRange.toString().length;
+      return { start: Math.min(start, end), end: Math.max(start, end) };
+    }
+
+    function getCaretOffset(container) {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return 0;
+      const range = selection.getRangeAt(0);
+      const preRange = range.cloneRange();
+      preRange.selectNodeContents(container);
+      preRange.setEnd(range.endContainer, range.endOffset);
+      return preRange.toString().length;
+    }
+
+    function setCaretOffset(container, offset) {
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+      let remaining = offset;
+      let node = walker.nextNode();
+      while (node) {
+        if (remaining <= node.nodeValue.length) {
+          const range = document.createRange();
+          range.setStart(node, remaining);
+          range.collapse(true);
+          const selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range);
+          return;
+        }
+        remaining -= node.nodeValue.length;
+        node = walker.nextNode();
+      }
+      moveCursorToStart(container);
+    }
 
     trackSelects.forEach((select, index) => {
       trackOptions.forEach(track => select.append(new Option(track, track)));
@@ -996,6 +1212,8 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       window.print();
     });
 
+    snapshotBtn.addEventListener("click", createSnapshot);
+
     window.addEventListener("afterprint", restoreInputsAfterPrint);
 
     function insertPlainTextAtCursor(text) {
@@ -1006,6 +1224,15 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       const textNode = document.createTextNode(text);
       range.insertNode(textNode);
       range.setStartAfter(textNode);
+      range.collapse(true);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    function moveCursorToStart(box) {
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(box);
       range.collapse(true);
       selection.removeAllRanges();
       selection.addRange(range);
