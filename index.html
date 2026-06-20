@@ -211,6 +211,10 @@
       min-height: 38px;
     }
 
+    .input-card-header .track-picker {
+      margin-right: auto;
+    }
+
     .track-picker {
       display: flex;
       align-items: center;
@@ -258,9 +262,9 @@
 
     .summary {
       display: grid;
-      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      grid-template-columns: 1fr 1fr 1fr 1.45fr;
       gap: 0;
-      overflow-x: auto;
+      overflow-x: hidden;
       overflow-y: hidden;
       margin-bottom: 16px;
     }
@@ -494,6 +498,35 @@
       th, td {
         padding: 6px 8px;
       }
+
+      .summary-table {
+        table-layout: fixed;
+        font-size: 12px;
+      }
+
+      .summary-table col:nth-child(1) { width: 16% !important; }
+      .summary-table col:nth-child(2) { width: 16% !important; }
+      .summary-table col:nth-child(3) { width: 10% !important; }
+      .summary-table col:nth-child(4) { width: 12% !important; }
+      .summary-table col:nth-child(5) { width: 22% !important; }
+      .summary-table col:nth-child(6) { width: 24% !important; }
+
+      .summary-table th {
+        font-size: 10px;
+        line-height: 1.25;
+        white-space: normal;
+      }
+
+      .summary-table td {
+        font-size: 12px;
+        line-height: 1.25;
+        overflow-wrap: normal;
+        word-break: normal;
+      }
+
+      .summary-table td[contenteditable="true"] {
+        min-height: 26px;
+      }
     }
   </style>
 </head>
@@ -520,22 +553,20 @@
         <div class="input-list" id="inputList">
           <div class="input-card">
             <div class="input-card-header">
-              <strong>Input 1</strong>
               <span class="track-print-label"></span>
+              <label class="track-picker">Track
+                <select class="trackSelect"></select>
+              </label>
               <div class="input-controls">
                 <button id="printBtn" class="secondary">Save PDF</button>
                 <button id="snapshotBtn" class="secondary">Snap Shot</button>
                 <button id="clearBtn" class="secondary">Clear</button>
               </div>
-              <label class="track-picker">Track
-                <select class="trackSelect"></select>
-              </label>
             </div>
             <div class="dataInput input-editor" contenteditable="true" spellcheck="false" data-placeholder="Paste railcar report data here"></div>
           </div>
           <div class="input-card">
             <div class="input-card-header">
-              <strong>Input 2</strong>
               <span class="track-print-label"></span>
               <label class="track-picker">Track
                 <select class="trackSelect"></select>
@@ -545,7 +576,6 @@
           </div>
           <div class="input-card">
             <div class="input-card-header">
-              <strong>Input 3</strong>
               <span class="track-print-label"></span>
               <label class="track-picker">Track
                 <select class="trackSelect"></select>
@@ -555,7 +585,6 @@
           </div>
           <div class="input-card">
             <div class="input-card-header">
-              <strong>Input 4</strong>
               <span class="track-print-label"></span>
               <label class="track-picker">Track
                 <select class="trackSelect"></select>
@@ -587,6 +616,8 @@
     let renderingHighlights = false;
     let snapshotActive = false;
     let snapshotOriginals = [];
+    let snapshotMetricsHtml = "";
+    const notesByKey = new Map();
 
     const trackOptions = ["06-801", "06-802", "06-803", "06-804", "06-805", "06-806", "06-807", "06-808", "06-809"];
 
@@ -770,14 +801,16 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
         const wells = new Map();
         car.positions.forEach(position => {
           const key = position.well;
-          const well = wells.get(key) || { well: position.well, stack: position.stack, top: null, bottom: null };
-          if (position.level === "T") well.top = position;
-          if (position.level === "B") well.bottom = position;
+          const well = wells.get(key) || { well: position.well, tops: [], bottoms: [] };
+          if (position.level === "T") well.tops.push(position);
+          if (position.level === "B") well.bottoms.push(position);
           wells.set(key, well);
         });
 
         wells.forEach(well => {
-          if (well.bottom && !well.top) {
+          if (well.bottoms.length && !well.tops.length) {
+            const bottomUnits = well.bottoms.map(bottom => bottom.unitId).filter(Boolean);
+            const bottomPositions = well.bottoms.map(bottom => bottom.rawPosition).filter(Boolean);
             missing.push({
               seq: car.seq,
               equipmentId: car.equipmentId,
@@ -785,13 +818,13 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
               sourceIndex: car.sourceIndex,
               carKind: car.carKind,
               aarKind: car.aarKind,
-              destination: well.bottom.destination || car.destination || "EMPTY CONTAINER",
+              destination: well.bottoms.find(bottom => bottom.destination)?.destination || car.destination || "EMPTY CONTAINER",
               well: well.well,
-              stack: well.stack,
-              expectedTop: `${well.well}T${well.stack}`,
-              bottomPosition: well.bottom.rawPosition,
-              bottomUnit: well.bottom.unitId,
-              rawLine: well.bottom.rawLine,
+              stack: well.bottoms.map(bottom => bottom.stack).join("/"),
+              expectedTop: `${well.well}T1`,
+              bottomPosition: bottomPositions.join(", "),
+              bottomUnit: bottomUnits.join(", "),
+              rawLines: well.bottoms.map(bottom => bottom.rawLine),
               detail: "Bottom listed without matching top"
             });
           }
@@ -801,40 +834,52 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     }
 
     function calculateSlotUtilization(cars) {
-      let loadedTops = 0;
-      let possibleTops = 0;
+      let bottomSlots = 0;
+      let loadedTopSlots = 0;
+      let possibleTopSlots = 0;
 
       cars.forEach(car => {
         const wells = new Map();
         car.positions.forEach(position => {
           const key = position.well;
-          const well = wells.get(key) || { top: null, bottom: null };
-          if (position.level === "T") well.top = position;
-          if (position.level === "B") well.bottom = position;
+          const well = wells.get(key) || { tops: [], bottoms: [] };
+          if (position.level === "T") well.tops.push(position);
+          if (position.level === "B") well.bottoms.push(position);
           wells.set(key, well);
         });
 
         wells.forEach(well => {
-          if (well.bottom) {
-            possibleTops++;
-            if (well.top) loadedTops++;
+          if (well.bottoms.length) {
+            bottomSlots += well.bottoms.length;
+            possibleTopSlots++;
+            if (well.tops.length) loadedTopSlots++;
           }
         });
       });
 
+      const loadedSlots = bottomSlots + loadedTopSlots;
+      const possibleSlots = bottomSlots + possibleTopSlots;
       return {
-        loadedTops,
-        possibleTops,
-        rate: possibleTops ? Math.round((loadedTops / possibleTops) * 1000) / 10 : 0
+        loadedSlots,
+        possibleSlots,
+        bottomSlots,
+        loadedTopSlots,
+        possibleTopSlots,
+        rate: possibleSlots ? Math.round((loadedSlots / possibleSlots) * 1000) / 10 : 0
       };
     }
 
     function analyzeRailcarReport(entries) {
+      saveNotes();
       const cars = parseAllRailcarReports(entries);
       const missing = findMissingTops(cars);
       const affectedCars = new Set(missing.map(item => item.equipmentId)).size;
       const slotUtilization = calculateSlotUtilization(cars);
-      renderReportSummary(cars.length, missing.length, affectedCars, slotUtilization, getMainDestinationOffender(missing));
+      if (!snapshotActive || !snapshotMetricsHtml) {
+        renderReportSummary(cars.length, missing.length, affectedCars, slotUtilization, getMainDestinationOffender(missing));
+      } else {
+        summary.innerHTML = snapshotMetricsHtml;
+      }
       renderMissingTopResults(missing, cars);
       highlightMissingTopLines(missing);
       parseStatus.textContent = "";
@@ -842,6 +887,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     }
 
     function createSnapshot() {
+      saveNotes();
       if (snapshotActive) {
         restoreSnapshot();
         return;
@@ -853,6 +899,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       const cars = parseAllRailcarReports(entries);
       const missing = findMissingTops(cars);
       snapshotOriginals = inputs.map(box => getInputText(box));
+      snapshotMetricsHtml = summary.innerHTML;
       snapshotActive = true;
       document.body.classList.add("snapshot-active");
       snapshotBtn.textContent = "Full View";
@@ -873,14 +920,17 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       });
 
       analyze();
+      summary.innerHTML = snapshotMetricsHtml;
     }
 
     function restoreSnapshot() {
+      saveNotes();
       inputs.forEach((box, index) => {
         setInputPlainText(box, snapshotOriginals[index] || "");
       });
       snapshotActive = false;
       snapshotOriginals = [];
+      snapshotMetricsHtml = "";
       document.body.classList.remove("snapshot-active");
       snapshotBtn.textContent = "Snap Shot";
       analyze();
@@ -930,7 +980,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       const byInput = new Map();
       missing.forEach(item => {
         const lines = byInput.get(item.sourceIndex) || new Set();
-        lines.add(normalizeLine(item.rawLine));
+        (item.rawLines || [item.rawLine]).forEach(line => lines.add(normalizeLine(line)));
         byInput.set(item.sourceIndex, lines);
       });
 
@@ -993,10 +1043,11 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     function renderReportSummary(carCount, missingTopCount, affectedCars, slotUtilization, mainDestination) {
       summary.innerHTML = `
         <div class="metric"><span class="value">${slotUtilization.rate}%</span><span class="label">Slot Utilization</span></div>
-        <div class="metric"><span class="value">${slotUtilization.loadedTops}/${slotUtilization.possibleTops}</span><span class="label">Well Breakdown</span></div>
+        <div class="metric"><span class="value">${slotUtilization.loadedSlots}/${slotUtilization.possibleSlots}</span><span class="label">Well Breakdown</span></div>
         <div class="metric"><span class="value">${missingTopCount}</span><span class="label">Missing Tops</span></div>
         <div class="metric"><span class="value">${escapeHtml(mainDestination)}</span><span class="label">Main Destination Offender</span></div>
       `;
+      fitMetricValues();
     }
 
     function renderMissingTopResults(missing, cars) {
@@ -1019,8 +1070,8 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
               <col style="width: 16%">
               <col style="width: 9%">
               <col style="width: 12%">
-              <col style="width: 24%">
               <col style="width: 23%">
+              <col style="width: 24%">
             </colgroup>
             <thead>
               <tr><th>Car</th><th>Destination</th><th>Track</th><th>Missing Wells</th><th>Bottom Units Missing Top</th><th>Notes</th></tr>
@@ -1033,7 +1084,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
                   <td>${escapeHtml(group.track)}</td>
                   <td>${escapeHtml(group.items.map(item => `${item.well}${item.stack}`).join(", "))}</td>
                   <td>${escapeHtml(group.items.map(item => item.bottomUnit || item.bottomPosition).join(", "))}</td>
-                  <td contenteditable="true" data-note-key="${escapeHtml(group.key)}"></td>
+                  <td contenteditable="true" data-note-key="${escapeHtml(group.key)}">${escapeHtml(notesByKey.get(group.key) || "")}</td>
                 </tr>
               `).join("")}
             </tbody>
@@ -1046,12 +1097,32 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     function groupMissingByCar(missing) {
       const map = new Map();
       missing.forEach(item => {
-        const key = `${item.track}|${item.seq}|${item.equipmentId}`;
-        const group = map.get(key) || { key, seq: item.seq, equipmentId: item.equipmentId, destination: item.destination, track: item.track, items: [] };
-        group.items.push(item);
+        const key = `${item.seq}|${item.equipmentId}|${item.destination}`;
+        const group = map.get(key) || {
+          key,
+          seq: item.seq,
+          equipmentId: item.equipmentId,
+          destination: item.destination,
+          tracks: new Set(),
+          itemKeys: new Set(),
+          items: []
+        };
+        const itemKey = `${item.well}${item.stack}|${item.bottomUnit || item.bottomPosition}`;
+        group.tracks.add(item.track);
+        if (!group.itemKeys.has(itemKey)) {
+          group.itemKeys.add(itemKey);
+          group.items.push(item);
+        }
+        group.track = [...group.tracks].sort().join(", ");
         map.set(key, group);
       });
       return [...map.values()];
+    }
+
+    function saveNotes() {
+      document.querySelectorAll("[data-note-key]").forEach(cell => {
+        notesByKey.set(cell.dataset.noteKey, cell.textContent.trim());
+      });
     }
 
     function renderEmpty(message) {
@@ -1061,9 +1132,23 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
         <div class="metric"><span class="value">0</span><span class="label">Missing Tops</span></div>
         <div class="metric"><span class="value">None</span><span class="label">Main Destination Offender</span></div>
       `;
+      fitMetricValues();
       results.className = "empty";
       results.textContent = message;
       statusLine.textContent = message;
+    }
+
+    function fitMetricValues() {
+      requestAnimationFrame(() => {
+        document.querySelectorAll(".metric .value").forEach(value => {
+          value.style.fontSize = "";
+          let size = parseFloat(getComputedStyle(value).fontSize);
+          while (value.scrollWidth > value.clientWidth && size > 12) {
+            size -= 1;
+            value.style.fontSize = `${size}px`;
+          }
+        });
+      });
     }
 
     function escapeHtml(value) {
@@ -1076,11 +1161,13 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     }
 
     clearBtn.addEventListener("click", () => {
+      notesByKey.clear();
       inputs.forEach(box => {
         setInputPlainText(box, "");
       });
       snapshotActive = false;
       snapshotOriginals = [];
+      snapshotMetricsHtml = "";
       document.body.classList.remove("snapshot-active");
       snapshotBtn.textContent = "Snap Shot";
       renderEmpty("Paste data into an input box to scan automatically.");
@@ -1110,6 +1197,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
         box.dataset.editing = "false";
         snapshotActive = false;
         snapshotOriginals = [];
+        snapshotMetricsHtml = "";
         document.body.classList.remove("snapshot-active");
         snapshotBtn.textContent = "Snap Shot";
         scheduleAnalyze(50);
@@ -1128,6 +1216,11 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
         box.dataset.editing = "false";
         scheduleAnalyze(50);
       });
+    });
+
+    results.addEventListener("input", event => {
+      const cell = event.target.closest("[data-note-key]");
+      if (cell) notesByKey.set(cell.dataset.noteKey, cell.textContent.trim());
     });
 
     function flattenEditorForEditing(box) {
@@ -1215,6 +1308,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     snapshotBtn.addEventListener("click", createSnapshot);
 
     window.addEventListener("afterprint", restoreInputsAfterPrint);
+    window.addEventListener("resize", fitMetricValues);
 
     function insertPlainTextAtCursor(text) {
       const selection = window.getSelection();
