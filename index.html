@@ -441,7 +441,7 @@
         margin-right: auto;
         break-inside: avoid;
         overflow: visible;
-        grid-template-columns: 1fr 1fr 1fr 1.35fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 8px;
         width: 100%;
       }
@@ -449,8 +449,9 @@
       .metric {
         border: 1px solid var(--line);
         border-radius: 8px;
-        padding: 10px 4px;
+        padding: 10px 8px;
         min-width: 0;
+        overflow: hidden;
       }
 
       .metric .value {
@@ -459,11 +460,14 @@
       }
 
       .metric:last-child .value {
-        font-size: 18px;
+        font-size: 20px;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: clip;
       }
 
       .metric .label {
-        font-size: 8px;
+        font-size: 9px;
         white-space: nowrap;
       }
 
@@ -738,7 +742,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
           return;
         }
 
-        if (currentCar && /System Destination:/i.test(line)) {
+        if (currentCar && /(?:System\s+)?Destination:/i.test(line)) {
           currentCar.destination = extractSystemDestination(line) || currentCar.destination;
           return;
         }
@@ -772,18 +776,39 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
           stack: posMatch[3],
           unitId,
           loadState: loadState.toUpperCase(),
-          destination: extractDestination(posMatch[4]),
+          destination: extractDestination(posMatch[4], tokens),
           rawLine: line.trim()
         };
     }
 
-    function extractDestination(positionText) {
-      const match = positionText.match(/\b([A-Z][A-Z-]*)\s+([A-Z]{2})\s+Loaded Railcar\b/i);
-      return match ? `${match[1]} ${match[2]}` : "";
+    function extractDestination(positionText, tokens = null) {
+      const parts = tokens || positionText.trim().split(/\s+/);
+      const statusIndex = findStatusIndex(parts);
+      const stateIndex = statusIndex - 1;
+      if (stateIndex < 7 || !/^[A-Z]{2}$/i.test(parts[stateIndex])) return "";
+
+      let destinationStart = 7;
+      if (/^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+$/i.test(parts[destinationStart] || "")) {
+        destinationStart++;
+      }
+
+      if (destinationStart > stateIndex) return "";
+      return parts.slice(destinationStart, stateIndex + 1).join(" ");
+    }
+
+    function findStatusIndex(tokens) {
+      for (let i = 7; i < tokens.length; i++) {
+        const word = tokens[i].toUpperCase();
+        const next = (tokens[i + 1] || "").toUpperCase();
+        if (word === "LOADED" && next === "RAILCAR") return i;
+        if (word === "PLANNING") return i;
+        if (word === "LOAD" && next === "PLANNED") return i;
+      }
+      return -1;
     }
 
     function extractSystemDestination(text) {
-      const match = text.match(/System Destination:\s*([A-Z0-9 -]+),?\s+([A-Z]{2})\b/i);
+      const match = text.match(/(?:System\s+)?Destination:\s*([A-Z0-9 -]+?),?\s+([A-Z]{2})\b/i);
       return match ? `${match[1].trim()} ${match[2].trim()}` : "";
     }
 
@@ -1033,8 +1058,8 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
 
     function getMainDestinationOffender(missing) {
       const counts = new Map();
-      missing.forEach(item => {
-        const destination = `${item.track} ${item.destination || "EMPTY CONTAINER"}`.trim();
+      groupMissingByCar(missing).forEach(group => {
+        const destination = `${group.track} ${group.destination || "EMPTY CONTAINER"}`.trim();
         counts.set(destination, (counts.get(destination) || 0) + 1);
       });
       return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || "None";
@@ -1302,11 +1327,13 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
 
     printBtn.addEventListener("click", () => {
       hideEmptyInputsForPrint();
+      fitMetricValues();
       window.print();
     });
 
     snapshotBtn.addEventListener("click", createSnapshot);
 
+    window.addEventListener("beforeprint", fitMetricValues);
     window.addEventListener("afterprint", restoreInputsAfterPrint);
     window.addEventListener("resize", fitMetricValues);
 
