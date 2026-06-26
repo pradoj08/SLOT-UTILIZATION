@@ -26,10 +26,11 @@
       margin: 0;
       background: var(--bg);
       color: var(--ink);
-      font: 14px/1.45 Arial, Helvetica, sans-serif;
+      font: 14px/1.45 "Trebuchet MS", "Segoe UI", Arial, sans-serif;
     }
 
     .report-heading {
+      position: relative;
       min-height: 82px;
       padding: 12px 18px;
       background: white;
@@ -51,6 +52,29 @@
     .report-heading h1:focus {
       outline-color: var(--accent);
       background: #f4fbfc;
+    }
+
+    .slot-mode-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .slot-mode-control select {
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: white;
+      color: var(--ink);
+      padding: 0 10px;
+      font: inherit;
+      text-transform: none;
     }
 
     main {
@@ -124,6 +148,18 @@
       margin-left: auto;
     }
 
+    .bottom-page-controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .bottom-page-controls .input-controls {
+      margin-left: 0;
+    }
+
     .print-hidden {
       display: none !important;
     }
@@ -151,10 +187,10 @@
       min-height: 220px;
       max-height: 360px;
       resize: vertical;
-      border: 1px solid var(--line);
-      border-radius: 6px;
+      border: none;
+      border-radius: 0;
       padding: 12px;
-      font: 13px/1.35 Consolas, "Courier New", monospace;
+      font: 13px/1.35 "Cascadia Mono", Consolas, "Courier New", monospace;
       color: var(--ink);
       background: white;
     }
@@ -166,6 +202,12 @@
       word-break: break-word;
     }
 
+    .input-editor:empty,
+    .input-editor[data-isempty="true"] {
+      min-height: 62px;
+      max-height: 62px;
+    }
+
     .snapshot-active .input-editor {
       min-height: 0;
       max-height: none;
@@ -173,8 +215,8 @@
     }
 
     .input-editor:focus {
-      outline: 2px solid var(--accent);
-      outline-offset: 1px;
+      outline: none;
+      box-shadow: inset 0 0 0 2px var(--accent);
     }
 
     .input-editor > span {
@@ -187,20 +229,42 @@
     }
 
     .snapshot-seq-line {
-      background: #eef2f6;
-      color: var(--ink);
+      background: #111827;
+      color: white;
       font-weight: 700;
+    }
+
+    .snapshot-no-missing {
+      font-weight: 800;
     }
 
     .input-list {
       display: grid;
-      gap: 14px;
+      gap: 16px;
+    }
+
+    .snapshot-tracklist-heading {
+      display: none;
+      margin: 0 0 10px;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .snapshot-active .snapshot-tracklist-heading {
+      display: block;
     }
 
     .input-card {
       display: grid;
-      gap: 8px;
+      gap: 0;
       scroll-margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(24, 33, 47, 0.05);
+      background: white;
     }
 
     .input-card-header {
@@ -209,10 +273,296 @@
       justify-content: space-between;
       gap: 12px;
       min-height: 38px;
+      padding: 8px 14px;
+      background: #f7f9fb;
+      border-bottom: 1px solid var(--line);
     }
 
     .input-card-header .track-picker {
-      margin-right: auto;
+      flex: 0 0 auto;
+    }
+
+    .snapshot-active .input-card-header {
+      justify-content: flex-start;
+      border-bottom: none;
+    }
+
+    .snapshot-active .input-card-header .track-picker {
+      display: none;
+    }
+
+    .track-pills {
+      display: flex;
+      align-items: center;
+      flex: 1 1 auto;
+      min-width: 0;
+      gap: 6px;
+      overflow: hidden;
+    }
+
+    .track-pill {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 5px;
+      max-width: 100%;
+      min-width: 0;
+      border: 1px solid #c6dfe3;
+      border-radius: 999px;
+      background: var(--chip);
+      color: #0e5660;
+      padding: 4px 8px;
+      white-space: nowrap;
+    }
+
+    .track-pill .pill-value {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .track-pill .pill-label {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 9px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .track-pill.offender {
+      flex: 0 1 auto;
+      max-width: min(420px, 100%);
+    }
+
+    .track-pill.slot-low {
+      border-color: #fca5a5;
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .track-pill.slot-mid {
+      border-color: #facc15;
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .track-pill.slot-high {
+      border-color: #86efac;
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .track-pill.slot-low .pill-label,
+    .track-pill.slot-mid .pill-label,
+    .track-pill.slot-high .pill-label {
+      color: inherit;
+      opacity: 0.78;
+    }
+
+    .track-pill.no-data {
+      flex: 0 0 auto;
+      color: var(--muted);
+      background: white;
+    }
+
+    .track-consist {
+      background: white;
+      padding: 10px 14px 12px;
+      overflow-x: hidden;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .track-consist[hidden] {
+      display: none;
+    }
+
+    .consist-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .consist-legend {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      border: 1px solid transparent;
+    }
+
+    .legend-swatch.loaded { background: #2f7a4d; }
+    .legend-swatch.no-top { background: #b53b2e; }
+    .consist-body {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-items: start;
+      gap: 4px;
+      padding: 10px 14px;
+    }
+
+    .consist-cars {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: end;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .consist-track-badge {
+      flex: 0 0 auto;
+      border-radius: 6px;
+      background: #111827;
+      color: #fbbf24;
+      padding: 9px 10px;
+      font-weight: 900;
+      letter-spacing: 0.05em;
+      margin-top: 26px;
+    }
+
+    .consist-car-wrap {
+      display: grid;
+      gap: 4px;
+      justify-items: center;
+    }
+
+    .consist-car-meta {
+      color: var(--muted);
+      font: 11px/1.2 "Cascadia Mono", Consolas, "Courier New", monospace;
+      text-align: center;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      border-radius: 999px;
+      padding: 3px 8px;
+    }
+
+    .consist-car-slot-rate {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .consist-car-slot-label {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .consist-car-meta.low-slot {
+      color: #991b1b;
+      background: #fee2e2;
+      border: 1px solid #fca5a5;
+    }
+
+    .consist-car-meta.low-slot .consist-car-slot-rate,
+    .consist-car-meta.low-slot .consist-car-slot-label {
+      color: #991b1b;
+    }
+
+    .consist-car {
+      min-width: 90px;
+      border: 1px solid #c7d3cc;
+      border-radius: 5px;
+      overflow: hidden;
+      background: #fbfdfb;
+    }
+
+    .consist-car.no-top .consist-car-id {
+      background: #b53b2e;
+    }
+
+    .consist-car-id {
+      background: #2f7048;
+      color: white;
+      padding: 4px 7px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    .consist-slots {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      min-height: 46px;
+      padding: 4px 5px 6px;
+    }
+
+    .consist-well {
+      display: grid;
+      justify-items: center;
+      gap: 2px;
+      min-width: 36px;
+      place-content: center;
+    }
+
+    .consist-top-slot {
+      width: 36px;
+      height: 19px;
+      border-radius: 3px;
+      border: 1px solid #9fb0a0;
+      background: #dcebe0;
+    }
+
+    .consist-bottom-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 2px;
+      width: 36px;
+      min-height: 19px;
+    }
+
+    .consist-bottom-slot {
+      width: 17px;
+      height: 19px;
+      border-radius: 3px;
+      border: 1px solid #9fb0a0;
+      background: #dcebe0;
+    }
+
+    .consist-well.single-bottom .consist-bottom-row {
+      min-height: 19px;
+    }
+
+    .consist-well.single-bottom .consist-bottom-slot {
+      width: 36px;
+      height: 19px;
+    }
+
+    .consist-top-slot.no-top {
+      border-color: #ef4444;
+      background: #fee2e2;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cline x1='0' y1='0' x2='100%25' y2='100%25' stroke='%23ef4444' stroke-width='2' stroke-opacity='0.55'/%3E%3Cline x1='100%25' y1='0' x2='0' y2='100%25' stroke='%23ef4444' stroke-width='2' stroke-opacity='0.55'/%3E%3C/svg%3E");
     }
 
     .track-picker {
@@ -432,6 +782,14 @@
         white-space: nowrap;
       }
 
+      .slot-mode-control {
+        display: none;
+      }
+
+      .bottom-page-controls {
+        display: none;
+      }
+
       .summary {
         border: 0;
         border-radius: 0;
@@ -474,6 +832,7 @@
       .input-controls,
       .input-title button,
       .input-card-header strong,
+      .track-pills,
       .track-picker,
       .track-picker select {
         display: none;
@@ -494,7 +853,6 @@
       .input-editor {
         min-height: 0;
         max-height: none;
-        border-color: var(--line);
         overflow: visible;
         font-size: 10px;
       }
@@ -554,6 +912,7 @@
 
       <div class="input-pane">
         <span id="parseStatus" class="hint" hidden></span>
+        <h2 class="snapshot-tracklist-heading">TRACKLIST SNAPSHOT OF NO TOP CARS</h2>
         <div class="input-list" id="inputList">
           <div class="input-card">
             <div class="input-card-header">
@@ -561,12 +920,9 @@
               <label class="track-picker">Track
                 <select class="trackSelect"></select>
               </label>
-              <div class="input-controls">
-                <button id="printBtn" class="secondary">Save PDF</button>
-                <button id="snapshotBtn" class="secondary">Snap Shot</button>
-                <button id="clearBtn" class="secondary">Clear</button>
-              </div>
+              <div class="track-pills" aria-live="polite"></div>
             </div>
+            <div class="track-consist" hidden></div>
             <div class="dataInput input-editor" contenteditable="true" spellcheck="false" data-placeholder="Paste railcar report data here"></div>
           </div>
           <div class="input-card">
@@ -575,7 +931,9 @@
               <label class="track-picker">Track
                 <select class="trackSelect"></select>
               </label>
+              <div class="track-pills" aria-live="polite"></div>
             </div>
+            <div class="track-consist" hidden></div>
             <div class="dataInput input-editor" contenteditable="true" spellcheck="false" data-placeholder="Optional additional railcar report data"></div>
           </div>
           <div class="input-card">
@@ -584,7 +942,9 @@
               <label class="track-picker">Track
                 <select class="trackSelect"></select>
               </label>
+              <div class="track-pills" aria-live="polite"></div>
             </div>
+            <div class="track-consist" hidden></div>
             <div class="dataInput input-editor" contenteditable="true" spellcheck="false" data-placeholder="Optional additional railcar report data"></div>
           </div>
           <div class="input-card">
@@ -593,7 +953,9 @@
               <label class="track-picker">Track
                 <select class="trackSelect"></select>
               </label>
+              <div class="track-pills" aria-live="polite"></div>
             </div>
+            <div class="track-consist" hidden></div>
             <div class="dataInput input-editor" contenteditable="true" spellcheck="false" data-placeholder="Optional additional railcar report data"></div>
           </div>
         </div>
@@ -601,15 +963,31 @@
 
       </div>
     </section>
+    <div class="bottom-page-controls">
+      <label class="slot-mode-control">Slot Calc
+        <select id="slotModeSelect">
+          <option value="average" selected>Percent Average</option>
+          <option value="well">Well Breakdown</option>
+        </select>
+      </label>
+      <div class="input-controls">
+        <button id="printBtn" class="secondary">Save PDF</button>
+        <button id="snapshotBtn" class="secondary">Snap Shot</button>
+        <button id="clearBtn" class="secondary">Clear</button>
+      </div>
+    </div>
   </main>
 
   <script>
     const inputs = [...document.querySelectorAll(".dataInput")];
     const trackSelects = [...document.querySelectorAll(".trackSelect")];
     const trackPrintLabels = [...document.querySelectorAll(".track-print-label")];
+    const trackPillGroups = [...document.querySelectorAll(".track-pills")];
+    const trackConsistViews = [...document.querySelectorAll(".track-consist")];
     const clearBtn = document.getElementById("clearBtn");
     const printBtn = document.getElementById("printBtn");
     const snapshotBtn = document.getElementById("snapshotBtn");
+    const slotModeSelect = document.getElementById("slotModeSelect");
     const statusLine = document.getElementById("statusLine");
     const parseStatus = document.getElementById("parseStatus");
     const results = document.getElementById("results");
@@ -621,7 +999,9 @@
     let snapshotActive = false;
     let snapshotOriginals = [];
     let snapshotMetricsHtml = "";
+    let slotCalculationMode = "average";
     const notesByKey = new Map();
+    const noMissingSnapshotMessage = "No missing tops. 100% slot";
 
     const trackOptions = ["06-801", "06-802", "06-803", "06-804", "06-805", "06-806", "06-807", "06-808", "06-809"];
 
@@ -679,6 +1059,16 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
         .filter(entry => entry.text.length);
     }
 
+    function getSnapshotOriginalEntries() {
+      return snapshotOriginals
+        .map((text, index) => ({
+          text: trimOuterBlankLines(text).trim(),
+          track: trackSelects[index].value,
+          sourceIndex: index
+        }))
+        .filter(entry => entry.text.length);
+    }
+
     function getCombinedInputText() {
       return getInputEntries().map(entry => entry.text).join("\n");
     }
@@ -719,6 +1109,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       box.dataset.highlightSignature = "";
       box.dataset.lastText = "";
       box.textContent = cleanText;
+      box.dataset.isempty = cleanText ? "false" : "true";
       box.scrollTop = 0;
     }
 
@@ -733,6 +1124,12 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
             equipmentId: seqMatch[2].replace(/\s+/g, " ").trim(),
             carKind: valueAfter(line, "Car Kind:"),
             aarKind: valueAfter(line, "AAR Kind:"),
+            length: fieldValue(line, "Length"),
+            tons: fieldValue(line, "Tons"),
+            totalLength: fieldValue(line, "Total Length"),
+            totalTons: fieldValue(line, "Total Tons"),
+            trainId: fieldValue(line, "Train ID"),
+            block: fieldValue(line, "Block"),
             destination: extractSystemDestination(line),
             track,
             sourceIndex,
@@ -820,6 +1217,12 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       return (nextLabel === -1 ? rest : rest.slice(0, nextLabel)).trim();
     }
 
+    function fieldValue(line, label) {
+      const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const match = line.match(new RegExp(`${escaped}:\\s*(.*?)(?=\\s{2,}[A-Z][A-Za-z /]+:\\s*|$)`, "i"));
+      return match ? match[1].trim() : "";
+    }
+
     function findMissingTops(cars) {
       const missing = [];
       cars.forEach(car => {
@@ -894,12 +1297,45 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       };
     }
 
+    function calculatePercentAverageSlotUtilization(cars) {
+      const breakdown = calculateSlotUtilization(cars);
+      if (!cars.length) return { ...breakdown, rate: 0 };
+      const totalRate = cars.reduce((sum, car) => sum + calculateSlotUtilization([car]).rate, 0);
+      return {
+        ...breakdown,
+        rate: Math.round((totalRate / cars.length) * 100) / 100
+      };
+    }
+
+    function calculateSelectedSlotUtilization(cars) {
+      return slotCalculationMode === "well"
+        ? calculateSlotUtilization(cars)
+        : calculatePercentAverageSlotUtilization(cars);
+    }
+
+    function formatSlotRate(rate) {
+      const value = Number(rate) || 0;
+      if (Number.isInteger(value)) return String(value);
+      const digits = slotCalculationMode === "average" ? 2 : 1;
+      return value.toFixed(digits).replace(/\.?0+$/, "");
+    }
+
     function analyzeRailcarReport(entries) {
       saveNotes();
       const cars = parseAllRailcarReports(entries);
       const missing = findMissingTops(cars);
       const affectedCars = new Set(missing.map(item => item.equipmentId)).size;
-      const slotUtilization = calculateSlotUtilization(cars);
+      const slotUtilization = calculateSelectedSlotUtilization(cars);
+      if (snapshotActive && snapshotOriginals.length) {
+        const originalEntries = getSnapshotOriginalEntries();
+        const originalCars = parseAllRailcarReports(originalEntries);
+        const originalMissing = findMissingTops(originalCars);
+        renderTrackPills(originalEntries, originalCars, originalMissing);
+        renderTrackConsists(originalEntries, originalCars, originalMissing);
+      } else {
+        renderTrackPills(entries, cars, missing);
+        renderTrackConsists(entries, cars, missing);
+      }
       if (!snapshotActive || !snapshotMetricsHtml) {
         renderReportSummary(cars.length, missing.length, affectedCars, slotUtilization, getMainDestinationOffender(missing));
       } else {
@@ -928,6 +1364,20 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       snapshotActive = true;
       document.body.classList.add("snapshot-active");
       snapshotBtn.textContent = "Full View";
+
+      if (!missing.length) {
+        inputs.forEach((box, index) => {
+          setInputPlainText(box, snapshotOriginals[index].trim() ? noMissingSnapshotMessage : "");
+        });
+        renderTrackPills(entries, cars, missing);
+        renderTrackConsists(entries, cars, missing);
+        renderMissingTopResults(missing, cars);
+        summary.innerHTML = snapshotMetricsHtml;
+        parseStatus.textContent = "";
+        statusLine.textContent = "";
+        return;
+      }
+
       const keepSeqsByInput = new Map();
       missing.forEach(item => {
         const keepSeqs = keepSeqsByInput.get(item.sourceIndex) || new Set();
@@ -938,7 +1388,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       inputs.forEach((box, index) => {
         const keepSeqs = keepSeqsByInput.get(index);
         if (!keepSeqs || !keepSeqs.size) {
-          setInputPlainText(box, "");
+          setInputPlainText(box, snapshotOriginals[index].trim() ? noMissingSnapshotMessage : "");
           return;
         }
         setInputPlainText(box, filterTextToSeqs(getInputText(box), keepSeqs));
@@ -975,8 +1425,20 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       });
       return blocks
         .filter(block => keepSeqs.has(block.seq))
-        .map(block => trimOuterBlankLines(block.lines.join("\n")))
+        .map(block => trimOuterBlankLines(block.lines.map(cleanSnapshotLine).join("\n")))
         .join("\n");
+    }
+
+    function cleanSnapshotLine(line) {
+      if (!/^Seq:\s*\d+/i.test(line)) return line;
+      return line
+        .replace(/\s+Total\s+Length:\s*\S+/i, "")
+        .replace(/\s+Total\s+Tons:\s*\S+/i, "")
+        .replace(/\s+AAR\s+Kind:\s*\S+/i, "")
+        .replace(/\s+Length:\s*\S+/i, "")
+        .replace(/\s+Tons:\s*\S+/i, "")
+        .replace(/[ \t\u00a0]{2,}/g, "    ")
+        .trimEnd();
     }
 
     function analyze() {
@@ -1021,6 +1483,9 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
         box.innerHTML = splitPreservingBlankLines(text)
           .map(line => {
             const escaped = escapeHtml(line);
+            if (snapshotActive && line.trim() === noMissingSnapshotMessage) {
+              return `<span class="snapshot-no-missing">${escaped}</span>`;
+            }
             if (snapshotActive && /^Seq:\s*\d+/i.test(line.trim())) {
               return `<span class="snapshot-seq-line">${escaped}</span>`;
             }
@@ -1065,14 +1530,167 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || "None";
     }
 
-    function renderReportSummary(carCount, missingTopCount, affectedCars, slotUtilization, mainDestination) {
-      summary.innerHTML = `
-        <div class="metric"><span class="value">${slotUtilization.rate}%</span><span class="label">Slot Utilization</span></div>
+    function reportSummaryHtml(missingTopCount, slotUtilization, mainDestination) {
+      return `
+        <div class="metric"><span class="value">${formatSlotRate(slotUtilization.rate)}%</span><span class="label">Slot Utilization</span></div>
         <div class="metric"><span class="value">${slotUtilization.loadedSlots}/${slotUtilization.possibleSlots}</span><span class="label">Well Breakdown</span></div>
         <div class="metric"><span class="value">${missingTopCount}</span><span class="label">Missing Tops</span></div>
         <div class="metric"><span class="value">${escapeHtml(mainDestination)}</span><span class="label">Main Destination Offender</span></div>
       `;
+    }
+
+    function renderReportSummary(carCount, missingTopCount, affectedCars, slotUtilization, mainDestination) {
+      summary.innerHTML = reportSummaryHtml(missingTopCount, slotUtilization, mainDestination);
       fitMetricValues();
+    }
+
+    function updateSnapshotMetricsFromOriginals() {
+      if (!snapshotActive || !snapshotOriginals.length) return;
+      const originalEntries = getSnapshotOriginalEntries();
+      const originalCars = parseAllRailcarReports(originalEntries);
+      const originalMissing = findMissingTops(originalCars);
+      const slotUtilization = calculateSelectedSlotUtilization(originalCars);
+      snapshotMetricsHtml = reportSummaryHtml(originalMissing.length, slotUtilization, getMainDestinationOffender(originalMissing));
+      summary.innerHTML = snapshotMetricsHtml;
+      fitMetricValues();
+    }
+
+    function renderTrackPills(entries, cars = null, missing = null) {
+      const entriesByInput = new Map(entries.map(entry => [entry.sourceIndex, entry]));
+      const parsedCars = cars || parseAllRailcarReports(entries);
+      const missingTops = missing || findMissingTops(parsedCars);
+
+      trackPillGroups.forEach((group, index) => {
+        if (!entriesByInput.has(index)) {
+          group.innerHTML = `<span class="track-pill no-data"><span class="pill-value">No data</span></span>`;
+          return;
+        }
+
+        const trackCars = parsedCars.filter(car => car.sourceIndex === index);
+        const trackMissing = missingTops.filter(item => item.sourceIndex === index);
+        const slotUtilization = calculateSelectedSlotUtilization(trackCars);
+        const offender = getMainDestinationOffender(trackMissing);
+
+        group.innerHTML = `
+          ${trackPill(slotUtilization.loadedSlots + "/" + slotUtilization.possibleSlots, "Well")}
+          ${trackPill(formatSlotRate(slotUtilization.rate) + "%", "Slot", slotPillClass(slotUtilization.rate))}
+          ${trackPill(trackMissing.length, "Missing")}
+          ${trackPill(offender, "Offender", "offender")}
+        `;
+      });
+    }
+
+    function renderTrackConsists(entries, cars = null, missing = null) {
+      const entriesByInput = new Map(entries.map(entry => [entry.sourceIndex, entry]));
+      const parsedCars = cars || parseAllRailcarReports(entries);
+      const missingTops = missing || findMissingTops(parsedCars);
+      const missingCarKeys = new Set(missingTops.map(item => carKey(item.sourceIndex, item.seq, item.equipmentId)));
+
+      trackConsistViews.forEach((view, index) => {
+        const entry = entriesByInput.get(index);
+        const trackCars = parsedCars.filter(car => car.sourceIndex === index);
+        if (!entry || !trackCars.length) {
+          view.hidden = true;
+          view.innerHTML = "";
+          return;
+        }
+
+        const trainId = trackCars.find(car => car.trainId)?.trainId || detectTrainName(entry.text);
+        const block = trackCars.find(car => car.block)?.block || "";
+        const consistLabel = `TRAIN CONSIST · ${trainId}${block ? ` — BLOCK ${block}` : ""}`;
+
+        view.hidden = false;
+        view.innerHTML = `
+          <div class="consist-body">
+            <div class="consist-track-badge">${escapeHtml(entry.track)}</div>
+            <div class="consist-cars">
+              ${trackCars.map(car => renderConsistCar(car, missingCarKeys.has(carKey(car.sourceIndex, car.seq, car.equipmentId)))).join("")}
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function renderConsistCar(car, hasMissingTop) {
+      const slots = getConsistSlots(car);
+      const slotUtilization = calculateSelectedSlotUtilization([car]);
+      const carClasses = ["consist-car"];
+      const metaClasses = ["consist-car-meta"];
+      if (hasMissingTop) carClasses.push("no-top");
+      if (slotUtilization.rate < 100) metaClasses.push("low-slot");
+
+      return `
+        <div class="consist-car-wrap">
+          <div class="${metaClasses.join(" ")}">
+            <span class="consist-car-slot-rate">${formatSlotRate(slotUtilization.rate)}%</span>
+            <span class="consist-car-slot-label">Slot</span>
+          </div>
+          <div class="${carClasses.join(" ")}">
+            <div class="consist-car-id">${escapeHtml(car.equipmentId)}</div>
+            <div class="consist-slots">
+              ${slots.map(renderConsistWell).join("")}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderConsistWell(slot) {
+      const bottomCount = Math.max(1, slot.bottomCount || 1);
+      const wellClasses = ["consist-well", bottomCount === 1 ? "single-bottom" : "multi-bottom"];
+      return `
+        <span class="${wellClasses.join(" ")}" title="${escapeHtml(slot.label)}">
+          <span class="consist-top-slot ${slot.noTop ? "no-top" : "loaded"}"></span>
+          <span class="consist-bottom-row">
+            ${Array.from({ length: bottomCount }, () => `<span class="consist-bottom-slot"></span>`).join("")}
+          </span>
+        </span>
+      `;
+    }
+
+    function getConsistSlots(car) {
+      const wells = new Map();
+      car.positions.forEach(position => {
+        const well = wells.get(position.well) || { well: position.well, tops: 0, bottomStacks: new Set() };
+        if (position.level === "T") well.tops++;
+        if (position.level === "B") well.bottomStacks.add(position.stack);
+        wells.set(position.well, well);
+      });
+
+      const slots = [...wells.values()]
+        .filter(well => well.bottomStacks.size)
+        .sort((a, b) => a.well.localeCompare(b.well))
+        .map(well => {
+          const stacks = [...well.bottomStacks].sort((a, b) => Number(a) - Number(b));
+          return {
+            well: well.well,
+            label: `${well.well}${stacks.join("/")}`,
+            bottomCount: stacks.length,
+            noTop: !well.tops
+          };
+        });
+
+      return slots.length ? slots : [{ well: "Loaded", label: "Loaded", bottomCount: 1, noTop: false }];
+    }
+
+    function carKey(sourceIndex, seq, equipmentId) {
+      return `${sourceIndex}|${seq}|${equipmentId}`;
+    }
+
+    function slotPillClass(rate) {
+      const value = Number(rate) || 0;
+      if (value >= 94) return "slot-high";
+      if (value >= 91) return "slot-mid";
+      return "slot-low";
+    }
+
+    function trackPill(value, label, extraClass = "") {
+      return `
+        <span class="track-pill ${extraClass}">
+          <span class="pill-value">${escapeHtml(value)}</span>
+          <span class="pill-label">${escapeHtml(label)}</span>
+        </span>
+      `;
     }
 
     function renderMissingTopResults(missing, cars) {
@@ -1151,6 +1769,8 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     }
 
     function renderEmpty(message) {
+      renderTrackPills([]);
+      renderTrackConsists([]);
       summary.innerHTML = `
         <div class="metric"><span class="value">0%</span><span class="label">Slot Utilization</span></div>
         <div class="metric"><span class="value">0/0</span><span class="label">Well Breakdown</span></div>
@@ -1177,7 +1797,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
     }
 
     function escapeHtml(value) {
-      return String(value || "")
+      return String(value ?? "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -1196,6 +1816,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       document.body.classList.remove("snapshot-active");
       snapshotBtn.textContent = "Snap Shot";
       renderEmpty("Paste data into an input box to scan automatically.");
+    inputs.forEach(box => { box.dataset.isempty = "true"; });
       parseStatus.textContent = "";
       statusLine.textContent = "";
       updatePageTitle("");
@@ -1233,6 +1854,7 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
           box.dataset.rawText = trimOuterBlankLines(box.innerText || "");
           box.dataset.highlightSignature = "";
           box.dataset.lastText = "";
+          box.dataset.isempty = box.dataset.rawText ? "false" : "true";
         }
         scheduleAnalyze();
       });
@@ -1324,6 +1946,13 @@ AB1    EMHU 634573    U287    K70    L    COFC    6    ICTF CA    Loaded Railcar
       });
     });
     updateTrackPrintLabels();
+    renderTrackPills([]);
+
+    slotModeSelect.addEventListener("change", () => {
+      slotCalculationMode = slotModeSelect.value;
+      updateSnapshotMetricsFromOriginals();
+      analyze();
+    });
 
     printBtn.addEventListener("click", () => {
       hideEmptyInputsForPrint();
