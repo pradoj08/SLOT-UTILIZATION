@@ -173,7 +173,7 @@
     }
 
     h2 {
-      font-size: 16px;
+      font-size: 21px;
       margin: 0;
     }
 
@@ -244,17 +244,15 @@
     }
 
     .snapshot-tracklist-heading {
-      display: none;
+      display: block;
       margin: 0 0 10px;
-      font-size: 16px;
+      font-size: 21px;
       font-weight: 800;
       letter-spacing: 0;
-      text-transform: uppercase;
+      text-transform: none;
     }
 
-    .snapshot-active .snapshot-tracklist-heading {
-      display: block;
-    }
+    
 
     .input-card {
       display: grid;
@@ -288,7 +286,7 @@
     }
 
     .snapshot-active .input-card-header .track-picker {
-      display: none;
+      display: flex;
     }
 
     .track-pills {
@@ -310,7 +308,7 @@
       border-radius: 999px;
       background: var(--chip);
       color: #0e5660;
-      padding: 4px 8px;
+      padding: 6px 12px;
       white-space: nowrap;
     }
 
@@ -318,14 +316,14 @@
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 800;
     }
 
     .track-pill .pill-label {
       flex: 0 0 auto;
       color: var(--muted);
-      font-size: 9px;
+      font-size: 11px;
       font-weight: 800;
       text-transform: uppercase;
     }
@@ -912,7 +910,7 @@
 
       <div class="input-pane">
         <span id="parseStatus" class="hint" hidden></span>
-        <h2 class="snapshot-tracklist-heading">TRACKLIST SNAPSHOT OF NO TOP CARS</h2>
+        <h2 class="snapshot-tracklist-heading">Tracklist Snapshot Of No Top Cars</h2>
         <div class="input-list" id="inputList">
           <div class="input-card">
             <div class="input-card-header">
